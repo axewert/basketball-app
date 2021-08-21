@@ -87,72 +87,116 @@ class MainScene extends Phaser.Scene {
         {x: 85, y: 5}
       ],
       [
-        {x: -68, y: 35},
-        {x: -35, y: 28},
-        {x: 35, y: 28},
-        {x: 68, y: 35},
+        {x: -68, y: 30},
+        {x: -35, y: 30},
+        {x: 35, y: 30},
+        {x: 68, y: 30},
 
       ],
       [
-        {x: -50, y: 46},
-        {x: 0, y: 46},
-        {x: 50, y: 46}
+        {x: -50, y: 41},
+        {x: 0, y: 41},
+        {x: 50, y: 41}
       ],
       [
-        {x: -58, y: 58},
-        {x: -26, y: 64},
-        {x: 26, y: 64},
-        {x: 58, y: 58},
+        {x: -58, y: 59},
+        {x: -26, y: 59},
+        {x: 26, y: 59},
+        {x: 58, y: 59},
 
       ],
       [
-        {x: -50, y: 84},
-        {x: 0, y: 88},
-        {x: 50, y: 84}
+        {x: -50, y: 79},
+        {x: 0, y: 79},
+        {x: 50, y: 79}
       ],
       [
-        {x: -28, y: 102},
-        {x: 28, y: 102},
+        {x: -48, y: 97},
+        {x: -28, y: 97},
+        {x: 28, y: 97},
+        {x: 48, y: 97}
       ],
       [
-        {x: -46, y: 120},
-        {x: 0, y: 116},
-        {x: 46, y: 120}
+        {x: -46, y: 115},
+        {x: 0, y: 115},
+        {x: 46, y: 115}
       ],
     ]
-    // for (let row = 0; row < basketNetPoints.length; row++) {
-    //   for (let point = 0; point < basketNetPoints[row].length; point++) {
-    //     const {x, y} = basketNetPoints[row][point]
-    //     this.matter.add.circle(this.ring.x + x,this.ring.y + y,6, {
-    //       isStatic: true,
-    //       render: {
-    //         visible: true
-    //       }
-    //     })
-    //   }
-    // }
+
     this.basketNet = basketNetPoints.map(row => row.map(({x,y}) => {
-      return this.matter.add.circle(100 + x,100 + y,6, {
-          isStatic: false,
+      return this.matter.add.circle(this.ring.x + x,this.ring.y + y,6, {
           render: {
             visible: true
           }
         })
     }))
-    // this.basketNet.reduce((current, acc) => {
-    //   this.matter.add.constraint(acc[0], current[0], 100, 1)
-    //   return acc
-    // })
-    this.basketNet.map((row, rowIndex) => {
-      if (rowIndex === 0) {
-        this.matter.add.constraint(this.basketNet[0][1], this.basketNet[1][1], 20, 1, {
-          lineColor: 0xffffff,
-          lineThickness: 10
-        })
-        this.matter.add.constraint(this.basketNet[0][2], this.basketNet[1][2])
-        row.forEach(point => point.isStatic = true)
-      }
+    const createConstraint = (start, end, lineThickness = 3) => {
+      const distance = Phaser.Math.Distance.Between(
+        start.position.x, start.position.y,
+        end.position.x, end.position.y
+      )
+      this.matter.add.constraint(
+            start,
+            end,
+            distance,1,
+            {
+              render: {
+                lineColor: 0xffffff,
+                lineThickness,
+                visible: true
+              }
+            }
+          )
+    }
+    const firstRow = 0
+    const lastRow = this.basketNet.length - 1
+    this.basketNet[firstRow].forEach((point, pointIndex) => {
+      point.isStatic = true
+      const start = this.basketNet[firstRow][pointIndex]
+      const end = this.basketNet[firstRow+1][pointIndex]
+      createConstraint(start, end)
     })
+    this.basketNet[lastRow].forEach((_, pointIndex) => {
+      const start = this.basketNet[lastRow][pointIndex]
+      const endPoints = [
+        this.basketNet[lastRow-1][pointIndex],
+        this.basketNet[lastRow-1][pointIndex+1],
+      ]
+        .forEach(end => createConstraint(start, end))
+    })
+
+    this.basketNet
+      .forEach((row,rowIndex) => {
+        if (row.length === 3 && rowIndex !== lastRow) {
+          row.forEach((_, pointIndex) => {
+            const start = this.basketNet[rowIndex][pointIndex]
+            const endPoints = [
+              this.basketNet[rowIndex-1][pointIndex],
+              this.basketNet[rowIndex-1][pointIndex+1],
+              this.basketNet[rowIndex+1][pointIndex],
+              this.basketNet[rowIndex+1][pointIndex+1],
+            ]
+              .forEach(end => createConstraint(start, end))
+          })
+        }
+        if (rowIndex !== 1 && rowIndex !== 2 && rowIndex !== lastRow) {
+          const startLeft = this.basketNet[rowIndex][0]
+          const endLeft = this.basketNet[rowIndex+1][0]
+          const startRight = this.basketNet[rowIndex][row.length-1]
+          const endRight = this.basketNet[rowIndex+1][this.basketNet[rowIndex+1].length-1]
+          if (!endLeft || !endRight) return
+          createConstraint(startLeft,endLeft,5)
+          createConstraint(startRight,endRight,5)
+        }
+        else if (rowIndex === 1) {
+          const startLeft = this.basketNet[rowIndex][0]
+          const endLeft = this.basketNet[rowIndex+2][0]
+          const startRight = this.basketNet[rowIndex][row.length-1]
+          const endRight = this.basketNet[rowIndex+2][this.basketNet[rowIndex+2].length-1]
+          createConstraint(startLeft,endLeft,5)
+          createConstraint(startRight,endRight,5)
+        }
+      })
   }
   createMenu() {
     this.menu = this.add.image(60, 60, 'menu')
@@ -288,7 +332,7 @@ class MainScene extends Phaser.Scene {
     const ringOffsetY = -10
 
     this.tweens.add({
-      targets: this.ring,
+      targets: [this.ring, ...this.basketNet[0].map(point => point.position)],
       y: ringStartY + ringOffsetY,
       ease: 'Linear',
       repeat: 0,
