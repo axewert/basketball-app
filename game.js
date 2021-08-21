@@ -1,17 +1,61 @@
 class MainScene extends Phaser.Scene {
+  basketNetPoints =  [
+    [
+      {x: -85, y: 5},
+      {x: -42, y: 5},
+      {x: 42, y: 5},
+      {x: 85, y: 5}
+    ],
+    [
+      {x: -68, y: 30},
+      {x: -35, y: 30},
+      {x: 35, y: 30},
+      {x: 68, y: 30},
+
+    ],
+    [
+      {x: -50, y: 41},
+      {x: 0, y: 41},
+      {x: 50, y: 41}
+    ],
+    [
+      {x: -58, y: 59},
+      {x: -26, y: 59},
+      {x: 26, y: 59},
+      {x: 58, y: 59},
+
+    ],
+    [
+      {x: -50, y: 79},
+      {x: 0, y: 79},
+      {x: 50, y: 79}
+    ],
+    [
+      {x: -48, y: 97},
+      {x: -28, y: 97},
+      {x: 28, y: 97},
+      {x: 48, y: 97}
+    ],
+    [
+      {x: -46, y: 115},
+      {x: 0, y: 115},
+      {x: 46, y: 115}
+    ],
+  ]
+  basketLines = []
   constructor(config) {
     super({
       key: 'Main',
       physics: {
         default: 'arcade',
         arcade: {
-          debug: true,
+          debug: false,
           gravity: {
             y: 4000
           }
         },
         matter: {
-          debug: true,
+          debug: false,
           gravity: { y: 10 }
         }
       },
@@ -76,7 +120,9 @@ class MainScene extends Phaser.Scene {
     this.ballReset()
     this.createSounds()
     this.createMenu()
+    this.graphics = this.add.graphics({ lineStyle: { width: 4, color: 0xaa00aa }})
     this.createBasketNet()
+
   }
   createBasketNet() {
     const basketNetPoints = [
@@ -125,37 +171,41 @@ class MainScene extends Phaser.Scene {
 
     this.basketNet = basketNetPoints.map(row => row.map(({x,y}) => {
       return this.matter.add.circle(this.ring.x + x,this.ring.y + y,6, {
+          mass: 2,
           render: {
             visible: true
           }
         })
     }))
+
     const createConstraint = (start, end, lineThickness = 3) => {
       const distance = Phaser.Math.Distance.Between(
         start.position.x, start.position.y,
         end.position.x, end.position.y
       )
-      this.matter.add.constraint(
-            start,
-            end,
-            distance,1,
-            {
-              render: {
-                lineColor: 0xffffff,
-                lineThickness,
-                visible: true
-              }
-            }
-          )
+      this.graphics.strokeLineShape(createLine(start, end).geom)
+      this.matter.add.constraint(start,end, distance,1)
     }
+    const createLine = (start, end) => {
+      const line = {
+        geom: new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y),
+        start,
+        end
+      }
+      this.basketLines.push(line)
+      return line
+    }
+
     const firstRow = 0
     const lastRow = this.basketNet.length - 1
+
     this.basketNet[firstRow].forEach((point, pointIndex) => {
       point.isStatic = true
       const start = this.basketNet[firstRow][pointIndex]
       const end = this.basketNet[firstRow+1][pointIndex]
       createConstraint(start, end)
     })
+
     this.basketNet[lastRow].forEach((_, pointIndex) => {
       const start = this.basketNet[lastRow][pointIndex]
       const endPoints = [
@@ -167,6 +217,7 @@ class MainScene extends Phaser.Scene {
 
     this.basketNet
       .forEach((row,rowIndex) => {
+
         if (row.length === 3 && rowIndex !== lastRow) {
           row.forEach((_, pointIndex) => {
             const start = this.basketNet[rowIndex][pointIndex]
@@ -179,6 +230,7 @@ class MainScene extends Phaser.Scene {
               .forEach(end => createConstraint(start, end))
           })
         }
+
         if (rowIndex !== 1 && rowIndex !== 2 && rowIndex !== lastRow) {
           const startLeft = this.basketNet[rowIndex][0]
           const endLeft = this.basketNet[rowIndex+1][0]
@@ -188,6 +240,7 @@ class MainScene extends Phaser.Scene {
           createConstraint(startLeft,endLeft,5)
           createConstraint(startRight,endRight,5)
         }
+
         else if (rowIndex === 1) {
           const startLeft = this.basketNet[rowIndex][0]
           const endLeft = this.basketNet[rowIndex+2][0]
@@ -196,6 +249,7 @@ class MainScene extends Phaser.Scene {
           createConstraint(startLeft,endLeft,5)
           createConstraint(startRight,endRight,5)
         }
+
       })
   }
   createMenu() {
@@ -324,6 +378,13 @@ class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.ball, this.leftPin, this.pinCollide, this.targetCollideControl, this)
     this.physics.add.collider(this.ball, this.rightPin, this.pinCollide, this.targetCollideControl, this)
   }
+  updateBasketLines() {
+    this.graphics.clear()
+    this.basketLines.forEach(({start, end, geom}) => {
+      geom = new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y)
+      this.graphics.strokeLineShape(geom)
+    })
+  }
   pinCollide() {
     this.isPinCollide = true
     this.sounds.ball_bounce.play()
@@ -364,6 +425,32 @@ class MainScene extends Phaser.Scene {
     this.sounds.bell.play()
 
     this.ball.body.velocity.y = this.ball.body.velocity.y / 5
+    this.basketNet.forEach((row, rowIndex) => {
+      if(rowIndex % 2 === 1) return
+      const force = 0.1
+      this.tweens.add({
+        targets: row[0].force,
+        x: -force,
+        y: -force,
+        ease: 'Linear',
+        duration: 200,
+        onComplete: () => {
+          row[0].force.x = 0
+          row[0].force.y = 0
+        }
+      })
+      this.tweens.add({
+        targets: row[row.length - 1].force,
+        x: force,
+        y:-force,
+        ease: 'Linear',
+        duration: 200,
+        onComplete: () => {
+          row[row.length - 1].force.x = 0
+          row[row.length - 1].force.y = 0
+        }
+      })
+    })
     this.tweens.add({
       targets: this.ball,
       x: this.ballStartPointX,
@@ -395,6 +482,7 @@ class MainScene extends Phaser.Scene {
     this.clearCounter.setText(this.clearCount)
   }
   update() {
+    this.updateBasketLines()
     if (
       this.isBallMove
       && this.ball.body.velocity.y > 0
@@ -418,7 +506,7 @@ class MainScene extends Phaser.Scene {
       if (delta < 200) this.ballShadow.setAlpha(1 - delta/200)
     }
     this.ballShadow.x = this.ball.x
-    if(
+    if (
       !this.isGoal
       && this.ball.depth === 5
       && this.ball.body.velocity.y > 0
