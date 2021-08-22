@@ -41,7 +41,7 @@ class MainScene extends Phaser.Scene {
     this.basketCount = this.game.data.basketCount || 0
     this.cleanSeriesCount = null
     this.levelCount = 0
-    this.coinCount = 0
+    this.coinCount = this.game.data.coinCount || 0
     this.initFont()
   }
   initFont() {
@@ -249,25 +249,18 @@ class MainScene extends Phaser.Scene {
   createCoin() {
     this.coin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
     this.coin.alpha = 0
-    this.coinTween = this.tweens.add({
-          targets: this.coin,
-          scaleX: 0.1,
-          yoyo: true,
-          ease: 'linear',
-          duration: 300,
-          repeat: 1000
-    })
-      .pause()
+    this.isCoinActive = false
+    this.earnedCoin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
+    this.earnedCoin.alpha = 0
   }
   showCoin() {
-    if(this.coin.alpha) return
+    this.isCoinActive = true
     this.tweens.add({
       targets: this.coin,
       alpha: 1,
-      ease: 'linear',
-      duration: 300,
+      ease: 'Linear',
+      duration: 200,
     })
-    this.coinTween.play()
   }
 
   createMenu() {
@@ -457,7 +450,6 @@ class MainScene extends Phaser.Scene {
             this.drag.setEnable(true)
             this.ball.setScale(1)
             this.moveShieldGroup()
-            if(this.coinCount) this.showCoin()
           }
         })
       }
@@ -479,7 +471,6 @@ class MainScene extends Phaser.Scene {
   addCollide() {
     this.physics.add.collider(this.ball, this.leftPin, this.pinCollide, this.targetCollideControl, this)
     this.physics.add.collider(this.ball, this.rightPin, this.pinCollide, this.targetCollideControl, this)
-    this.physics.add.collider(this.ball, this.coin, this.coinCollide, this.targetCollideControl, this)
   }
 
   pinCollide() {
@@ -503,9 +494,7 @@ class MainScene extends Phaser.Scene {
       }
     })
   }
-  coinCollide() {
-    console.log('collide')
-  }
+
   targetCollideControl (ball, pin) {
     if(ball.depth === 20) return false
   }
@@ -574,7 +563,28 @@ class MainScene extends Phaser.Scene {
       }
     })
     this.updateCount()
-
+    this.isCoinActive
+      ? this.moveCoin()
+      : this.showCoin()
+  }
+  moveCoin() {
+    this.coin.alpha = 0
+    this.earnedCoin.alpha = 1
+    this.tweens.add({
+      targets: this.earnedCoin,
+      x: this.coinCounter.image.x,
+      y: this.coinCounter.image.y,
+      ease: 'Linear',
+      duration: 500,
+      onComplete: () => {
+        this.earnedCoin.alpha = 0
+        this.earnedCoin.setPosition(
+          this.coin.x,
+          this.coin.y
+        )
+        this.showCoin()
+      }
+    })
   }
   updateCount() {
     this.basketCount++
@@ -582,6 +592,7 @@ class MainScene extends Phaser.Scene {
     this.coinCount++
     this.basketCounter.setText(this.basketCount)
     this.game.data.basketCount = this.basketCount
+    this.game.data.coinCount = this.coinCount
     this.scoreCounter.setText(this.scoreCount)
     if(this.scoreCount > this.recordCount) {
       this.recordCount = this.scoreCount
@@ -612,34 +623,12 @@ class MainScene extends Phaser.Scene {
         duration: 300,
       })
     })
-
   }
 
   getRandom(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min
   }
-  moveCoin() {
 
-    this.tweens.add({
-      targets: this.coin,
-      x: this.coinCounter.image.x,
-      y: this.coinCounter.image.y,
-      ease: 'Linear',
-      duration: 300,
-      onComplete: () => {
-        this.coin.alpha = 0
-        this.coin.setPosition(this.initialPosition.coin.x, this.initialPosition.coin.y)
-        this.coinCount++
-        this.coinCounter.text.setText(this.coinCount)
-        this.tweens.add({
-          targets: this.coin,
-          alpha: 1,
-          ease: 'Linear',
-          duration: 20,
-        })
-      }
-    })
-  }
   update() {
     this.updateBasketLines()
     if (
@@ -675,7 +664,6 @@ class MainScene extends Phaser.Scene {
       && this.ball.x < this.rightPin.x
     ) {
       this.goal()
-      this.moveCoin()
     }
   }
 }
