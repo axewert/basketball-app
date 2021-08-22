@@ -30,15 +30,18 @@ class MainScene extends Phaser.Scene {
       recordCounter: {x: this.centerX - 155, y: 472},
       basketCounter: {x: this.centerX - 155, y: 502},
       cleanSeriesCounter: {x: this.centerX, y: 415},
+      coinCounter: {x: this.centerX + 220, y: this.centerY + 770},
       leftPin: {x: 0, y: 0},
       rightPin: {x: 0, y: 0},
-      basketNetPoints: []
+      basketNetPoints: [],
+      coin: {x: this.centerX, y: this.centerY + 300}
     }
     this.scoreCount = null
     this.recordCount = this.game.data.recordCount || 0
     this.basketCount = this.game.data.basketCount || 0
     this.cleanSeriesCount = null
     this.levelCount = 0
+    this.coinCount = 0
 
     this.initFont()
   }
@@ -57,6 +60,10 @@ class MainScene extends Phaser.Scene {
       font: '80px montserrat',
       fill: 'yellow'
     }
+    this.coinCountStyle = {
+      font: '40px montserrat',
+      fill: 'white'
+    }
   }
   preload() {
     this.load.image('ball', 'assets/sprites/ball.png')
@@ -65,7 +72,10 @@ class MainScene extends Phaser.Scene {
     this.load.image('menu', 'assets/sprites/menu.png')
     this.load.image('ring', 'assets/sprites/ring.png')
     this.load.image('shield', 'assets/sprites/shield.png')
+    this.load.image('coin', 'assets/sprites/coin.png')
     this.load.plugin('rexdragplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexdragplugin.min.js', true)
+    this.load.plugin('rexroundrectangleplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexroundrectangleplugin.min.js', true)
+
 
     this.load.audio('aaaaa', 'assets/sounds/aaaaa.mp3')
     this.load.audio('ball_bounce', 'assets/sounds/ball_bounce.mp3')
@@ -77,10 +87,12 @@ class MainScene extends Phaser.Scene {
 
   }
   create() {
+    this.graphics = this.add.graphics({ lineStyle: { width: 5, color: 0xffffff }})
     this.shield = this.add.image(this.initialPosition.shield.x, this.initialPosition.shield.y, 'shield').setOrigin(0)
     this.ring = this.add.image(this.initialPosition.ring.x, this.initialPosition.ring.y, 'ring')
       .setOrigin(0.5,0)
       .setDepth(10)
+    this.ring.isReady = true
     this.floor = this.add.image(this.initialPosition.floor.x, this.initialPosition.floor.y, 'floor')
     this.createPins()
     this.createBall()
@@ -90,10 +102,22 @@ class MainScene extends Phaser.Scene {
     this.ballReset()
     this.createSounds()
     this.createMenu()
-    this.graphics = this.add.graphics({ lineStyle: { width: 5, color: 0xffffff }})
     this.createBasketNet()
-
+    this.createCoin()
+    this.shieldGroup = [
+      this.shield,
+      this.basketCounter,
+      this.cleanSeriesCounter,
+      this.recordCounter,
+      this.scoreCounter,
+      this.ring,
+      this.leftPin,
+      this.rightPin,
+      ...this.basketNet[0].map(netPoint => netPoint.position),
+      this.coin
+    ]
   }
+
   createBasketNet() {
     this.initialPosition.basketNetPoints = [
       [
@@ -153,6 +177,7 @@ class MainScene extends Phaser.Scene {
         end.position.x, end.position.y
       )
       this.graphics.strokeLineShape(createLine(start, end).geom)
+      this.graphics.setDepth(10)
       this.matter.add.constraint(start, end, distance, 0.2)
     }
     const createLine = (start, end) => {
@@ -164,7 +189,6 @@ class MainScene extends Phaser.Scene {
       this.basketLines.push(line)
       return line
     }
-
     const firstRow = 0
     const lastRow = this.basketNet.length - 1
 
@@ -222,12 +246,20 @@ class MainScene extends Phaser.Scene {
 
       })
   }
+
+  createCoin() {
+    this.coin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
+    // this.coin.body.setCircle(36).setImmovable()
+    // this.coin.body.allowGravity = false
+  }
+
   createMenu() {
     this.menu = this.add.image(60, 60, 'menu')
     this.menu.setInteractive().on('pointerdown', () => {
       console.log('menu')
     })
   }
+
   createSounds() {
     this.sounds = {
       aaaaa: this.sound.add('aaaaa', {volume: 0.5}),
@@ -274,6 +306,34 @@ class MainScene extends Phaser.Scene {
       this.cleanSeriesCountStyle
     )
       .setOrigin(0.5)
+    this.coinCounter = {}
+    this.coinCounter.text = this.add.text(
+      this.initialPosition.coinCounter.x,
+      this.initialPosition.coinCounter.y,
+      this.coinCount,
+      this.coinCountStyle
+    )
+      .setOrigin(0.5)
+      .setAlign('left')
+      .setDepth(10)
+
+    this.coinCounter.image = this.add.image(
+      this.initialPosition.coinCounter.x + 40,
+      this.initialPosition.coinCounter.y,
+      'coin'
+    )
+      .setDepth(10)
+
+    this.coinCounter.bg = this.add.graphics()
+      .fillStyle(0x93aaa6, 1)
+      .fillRoundedRect(
+        this.initialPosition.coinCounter.x - 25,
+        this.initialPosition.coinCounter.y - 25,
+        100,
+        50,
+        10
+      )
+
   }
   createPins() {
     this.initialPosition.leftPin = {x: this.ring.x - 85, y: this.ring.y + 5}
@@ -387,18 +447,8 @@ class MainScene extends Phaser.Scene {
   }
   shieldGroupReset() {
     const x =  this.initialPosition.shield.x - this.shield.x;
-    const y = 0;
-    [
-      this.shield,
-      this.basketCounter,
-      this.cleanSeriesCounter,
-      this.recordCounter,
-      this.scoreCounter,
-      this.ring,
-      this.leftPin,
-      this.rightPin,
-      ...this.basketNet[0].map(netPoint => netPoint.position)
-    ].forEach(el => {
+    const y = this.initialPosition.shield.y - this.shield.y;
+    this.shieldGroup.forEach(el => {
       this.tweens.add({
         targets: el,
         x: el.x + x,
@@ -411,28 +461,33 @@ class MainScene extends Phaser.Scene {
   addCollide() {
     this.physics.add.collider(this.ball, this.leftPin, this.pinCollide, this.targetCollideControl, this)
     this.physics.add.collider(this.ball, this.rightPin, this.pinCollide, this.targetCollideControl, this)
+    this.physics.add.collider(this.ball, this.coin, this.coinCollide, this.targetCollideControl, this)
   }
 
   pinCollide() {
     this.isPinCollide = true
     this.sounds.ball_bounce.play()
 
-    const ringStartY = this.centerY + 136
+    const ringStartY = this.ring.y
     const ringOffsetY = -10
-
+    if(!this.ring.isReady) return
+    this.ring.isReady = false
     this.tweens.add({
       targets: [this.ring, ...this.basketNet[0].map(point => point.position)],
-      y: ringStartY + ringOffsetY,
+      y: this.ring.y + ringOffsetY,
       ease: 'Linear',
       repeat: 0,
       yoyo: true,
       duration: 20,
       onComplete: () => {
         this.ring.y = ringStartY
+        this.ring.isReady = true
       }
     })
   }
-
+  coinCollide() {
+    console.log('collide')
+  }
   targetCollideControl (ball, pin) {
     if(ball.depth === 20) return false
   }
@@ -523,20 +578,11 @@ class MainScene extends Phaser.Scene {
     this.cleanSeriesCount = null
     this.cleanSeriesCounter.setText(this.cleanSeriesCount)
   }
-  moveShieldGroup(y = 0) {
+  moveShieldGroup() {
     if(!this.levelCount) return
-    const x = this.getRandom(-100,100);
-    [
-      this.shield,
-      this.basketCounter,
-      this.cleanSeriesCounter,
-      this.recordCounter,
-      this.scoreCounter,
-      this.ring,
-      this.leftPin,
-      this.rightPin,
-      ...this.basketNet[0].map(netPoint => netPoint.position)
-    ].forEach(el => {
+    const x = this.getRandom(-100,100)
+    const y = this.levelCount > 2 ? this.getRandom(-100,100) : 0
+    this.shieldGroup.forEach(el => {
       this.tweens.add({
         targets: el,
         x: el.x + x,
