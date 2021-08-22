@@ -5,13 +5,13 @@ class MainScene extends Phaser.Scene {
       physics: {
         default: 'arcade',
         arcade: {
-          debug: false,
+          debug: true,
           gravity: {
             y: 4000
           }
         },
         matter: {
-          debug: false,
+          debug: true,
           gravity: { y: 10 }
         }
       },
@@ -42,7 +42,6 @@ class MainScene extends Phaser.Scene {
     this.cleanSeriesCount = null
     this.levelCount = 0
     this.coinCount = 0
-
     this.initFont()
   }
   initFont() {
@@ -96,14 +95,13 @@ class MainScene extends Phaser.Scene {
     this.floor = this.add.image(this.initialPosition.floor.x, this.initialPosition.floor.y, 'floor')
     this.createPins()
     this.createBall()
-    this.ballShadow = this.add.image(this.ball.x, this.initialPosition.ball.y + this.ballRadius, 'ball_shadow')
-    this.addCollide()
     this.createCounters()
+    this.createCoin()
+    this.ballShadow = this.add.image(this.ball.x, this.initialPosition.ball.y + this.ballRadius, 'ball_shadow')
     this.ballReset()
     this.createSounds()
     this.createMenu()
     this.createBasketNet()
-    this.createCoin()
     this.shieldGroup = [
       this.shield,
       this.basketCounter,
@@ -116,6 +114,7 @@ class MainScene extends Phaser.Scene {
       ...this.basketNet[0].map(netPoint => netPoint.position),
       this.coin
     ]
+    this.addCollide()
   }
 
   createBasketNet() {
@@ -249,8 +248,26 @@ class MainScene extends Phaser.Scene {
 
   createCoin() {
     this.coin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
-    // this.coin.body.setCircle(36).setImmovable()
-    // this.coin.body.allowGravity = false
+    this.coin.alpha = 0
+    this.coinTween = this.tweens.add({
+          targets: this.coin,
+          scaleX: 0.1,
+          yoyo: true,
+          ease: 'linear',
+          duration: 300,
+          repeat: 1000
+    })
+      .pause()
+  }
+  showCoin() {
+    if(this.coin.alpha) return
+    this.tweens.add({
+      targets: this.coin,
+      alpha: 1,
+      ease: 'linear',
+      duration: 300,
+    })
+    this.coinTween.play()
   }
 
   createMenu() {
@@ -316,7 +333,6 @@ class MainScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlign('left')
       .setDepth(10)
-
     this.coinCounter.image = this.add.image(
       this.initialPosition.coinCounter.x + 40,
       this.initialPosition.coinCounter.y,
@@ -333,7 +349,6 @@ class MainScene extends Phaser.Scene {
         50,
         10
       )
-
   }
   createPins() {
     this.initialPosition.leftPin = {x: this.ring.x - 85, y: this.ring.y + 5}
@@ -418,7 +433,9 @@ class MainScene extends Phaser.Scene {
     this.isBallMove = false
     this.ball.depth = 20
     if(this.isGoal) this.isGoal = false
-    else this.resetCount()
+    else {
+      this.resetCount()
+    }
     this.tweens.add({
       targets: this.ball,
       alpha: 0,
@@ -440,6 +457,7 @@ class MainScene extends Phaser.Scene {
             this.drag.setEnable(true)
             this.ball.setScale(1)
             this.moveShieldGroup()
+            if(this.coinCount) this.showCoin()
           }
         })
       }
@@ -555,12 +573,13 @@ class MainScene extends Phaser.Scene {
         this.ball.body.velocity.y = 0
       }
     })
-
     this.updateCount()
+
   }
   updateCount() {
     this.basketCount++
     this.levelCount++
+    this.coinCount++
     this.basketCounter.setText(this.basketCount)
     this.game.data.basketCount = this.basketCount
     this.scoreCounter.setText(this.scoreCount)
@@ -577,6 +596,8 @@ class MainScene extends Phaser.Scene {
     this.scoreCounter.setText(this.scoreCount)
     this.cleanSeriesCount = null
     this.cleanSeriesCounter.setText(this.cleanSeriesCount)
+    this.coinCount = 0
+    this.coinCounter.text.setText(this.coinCount)
   }
   moveShieldGroup() {
     if(!this.levelCount) return
@@ -597,7 +618,28 @@ class MainScene extends Phaser.Scene {
   getRandom(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min
   }
+  moveCoin() {
 
+    this.tweens.add({
+      targets: this.coin,
+      x: this.coinCounter.image.x,
+      y: this.coinCounter.image.y,
+      ease: 'Linear',
+      duration: 300,
+      onComplete: () => {
+        this.coin.alpha = 0
+        this.coin.setPosition(this.initialPosition.coin.x, this.initialPosition.coin.y)
+        this.coinCount++
+        this.coinCounter.text.setText(this.coinCount)
+        this.tweens.add({
+          targets: this.coin,
+          alpha: 1,
+          ease: 'Linear',
+          duration: 20,
+        })
+      }
+    })
+  }
   update() {
     this.updateBasketLines()
     if (
@@ -633,6 +675,7 @@ class MainScene extends Phaser.Scene {
       && this.ball.x < this.rightPin.x
     ) {
       this.goal()
+      this.moveCoin()
     }
   }
 }
