@@ -22,7 +22,17 @@ class MainScene extends Phaser.Scene {
     this.centerY = 320
     this.basketLines = []
     this.initialPosition = {
-      ball: {x: 0, y: 0}
+      shield: {x: this.centerX - 240, y: this.centerY - 120},
+      ball: {x: this.centerX, y: 872},
+      ring: {x: this.centerX, y: this.centerY + 136},
+      floor: {x: this.centerX, y: this.centerY + 620},
+      scoreCounter: {x: this.centerX, y: 290},
+      recordCounter: {x: this.centerX - 155, y: 472},
+      basketCounter: {x: this.centerX - 155, y: 502},
+      cleanSeriesCounter: {x: this.centerX, y: 415},
+      leftPin: {x: 0, y: 0},
+      rightPin: {x: 0, y: 0},
+      basketNetPoints: []
     }
     this.scoreCount = null
     this.recordCount = this.game.data.recordCount || 0
@@ -67,14 +77,14 @@ class MainScene extends Phaser.Scene {
 
   }
   create() {
-    this.shield = this.add.image(80, 200, 'shield').setOrigin(0)
-    this.ring = this.add.image(this.centerX, this.centerY + 136, 'ring')
+    this.shield = this.add.image(this.initialPosition.shield.x, this.initialPosition.shield.y, 'shield').setOrigin(0)
+    this.ring = this.add.image(this.initialPosition.ring.x, this.initialPosition.ring.y, 'ring')
       .setOrigin(0.5,0)
       .setDepth(10)
-    this.floor = this.add.image(this.centerX, this.centerY + 620, 'floor')
+    this.floor = this.add.image(this.initialPosition.floor.x, this.initialPosition.floor.y, 'floor')
     this.createPins()
     this.createBall()
-    this.ballShadow = this.add.image(this.ball.x, this.ballStartPointY + this.ballRadius, 'ball_shadow')
+    this.ballShadow = this.add.image(this.ball.x, this.initialPosition.ball.y + this.ballRadius, 'ball_shadow')
     this.addCollide()
     this.createCounters()
     this.ballReset()
@@ -85,7 +95,7 @@ class MainScene extends Phaser.Scene {
 
   }
   createBasketNet() {
-    const basketNetPoints = [
+    this.initialPosition.basketNetPoints = [
       [
         {x: -85, y: 5},
         {x: -42, y: 5},
@@ -129,7 +139,7 @@ class MainScene extends Phaser.Scene {
       ],
     ]
 
-    this.basketNet = basketNetPoints.map(row => row.map(({x,y}) => {
+    this.basketNet = this.initialPosition.basketNetPoints.map(row => row.map(({x,y}) => {
       return this.matter.add.circle(this.ring.x + x,this.ring.y + y,6, {
           render: {
             visible: true
@@ -231,20 +241,57 @@ class MainScene extends Phaser.Scene {
     }
   }
   createCounters() {
-    // this.scoreCounterStartPointX = this.centerX
-    // this.scoreCounterStartPointY = 290
-    // this.recordCounterStartPointX
-    // this.recordCounterStartPointY
-    // this.basketCounterStartPointX
-    // this.basketCounterStartPointY
-    this.scoreCounter = this.add.text(this.scoreCounterStartPointX, this.scoreCounterStartPointY, this.scoreCount, this.countStyle).setOrigin(0.5)
-    this.recordCounter = this.add.text(this.centerX - 155, 472, this.recordCount, this.miniCountStyle).setOrigin(0.5).setAlign('left')
-    this.basketCounter = this.add.text(this.centerX - 155, 502, this.basketCount, this.miniCountStyle).setOrigin(0.5).setAlign('left')
-    this.cleanSeriesCounter = this.add.text(this.centerX, 415, this.cleanSeriesCount, this.cleanSeriesCountStyle).setOrigin(0.5)
+    this.scoreCounter = this.add.text(
+      this.initialPosition.scoreCounter.x,
+      this.initialPosition.scoreCounter.y,
+      this.scoreCount,
+      this.countStyle
+    )
+      .setOrigin(0.5)
+
+    this.recordCounter = this.add.text(
+      this.initialPosition.recordCounter.x,
+      this.initialPosition.recordCounter.y,
+      this.recordCount,
+      this.miniCountStyle
+    )
+      .setOrigin(0.5)
+      .setAlign('left')
+
+    this.basketCounter = this.add.text(
+      this.initialPosition.basketCounter.x,
+      this.initialPosition.basketCounter.y,
+      this.basketCount,
+      this.miniCountStyle
+    )
+      .setOrigin(0.5)
+      .setAlign('left')
+
+    this.cleanSeriesCounter = this.add.text(
+      this.initialPosition.cleanSeriesCounter.x,
+      this.initialPosition.cleanSeriesCounter.y,
+      this.cleanSeriesCount,
+      this.cleanSeriesCountStyle
+    )
+      .setOrigin(0.5)
   }
   createPins() {
-    this.leftPin = this.add.circle(this.ring.x - 85, this.ring.y + 5, 6).setName('leftPin')
-    this.rightPin = this.add.circle(this.ring.x + 85, this.ring.y + 5, 6).setName('rightPin')
+    this.initialPosition.leftPin = {x: this.ring.x - 85, y: this.ring.y + 5}
+    this.initialPosition.rightPin = {x: this.ring.x + 85, y: this.ring.y + 5}
+
+    this.leftPin = this.add.circle(
+      this.initialPosition.leftPin.x,
+      this.initialPosition.leftPin.y,
+      6
+    )
+      .setName('leftPin')
+
+    this.rightPin = this.add.circle(
+      this.initialPosition.rightPin.x,
+      this.initialPosition.leftPin.y,
+      6
+    )
+      .setName('rightPin')
 
     this.physics.add.existing(this.leftPin)
     this.physics.add.existing(this.rightPin)
@@ -256,9 +303,7 @@ class MainScene extends Phaser.Scene {
     this.rightPin.body.allowGravity = false
   }
   createBall() {
-    this.ballStartPointX = this.centerX
-    this.ballStartPointY = 872
-    this.ball = this.physics.add.image(this.ballStartPointX, this.ballStartPointY, 'ball')
+    this.ball = this.physics.add.image(this.initialPosition.ball.x, this.initialPosition.ball.y, 'ball')
     this.ballRadius = 88
     this.ball.body.setCircle(this.ballRadius)
     this.ballSetInteractive()
@@ -272,7 +317,7 @@ class MainScene extends Phaser.Scene {
       })
       .on('drag', (pointer, dragX, dragY) => {
         if(this.timeDragStart === 0) this.timeDragStart = Date.now()
-        if(this.ballStartPointY - this.ball.y > 60) this.ballMove()
+        if(this.initialPosition.ball.y - this.ball.y > 60) this.ballMove()
       })
       .on('dragend', (pointer, dragX, dragY, dropped) => {
         if(!this.isBallMove) this.ballRelease()
@@ -283,8 +328,8 @@ class MainScene extends Phaser.Scene {
     this.ball.setActive(false)
     this.tweens.add({
       targets: this.ball,
-      x: this.ballStartPointX,
-      y: this.ballStartPointY,
+      x: this.initialPosition.ball.x,
+      y: this.initialPosition.ball.y,
       ease: 'Linear',
       duration: 100,
       onComplete: () => {
@@ -302,7 +347,7 @@ class MainScene extends Phaser.Scene {
     let speedDrag = timeDrag * 10
     if (speedDrag > 1000) speedDrag = 1000
     this.ball.body.velocity.y = -2700 + speedDrag
-    this.ball.body.velocity.x = (this.ball.x - this.ballStartPointX) * 20
+    this.ball.body.velocity.x = (this.ball.x - this.initialPosition.ball.x) * 20
     this.ball.body.setAngularVelocity(this.ball.body.velocity.x)
     this.isBallMove = true
     this.sounds.woosh.play()
@@ -325,8 +370,8 @@ class MainScene extends Phaser.Scene {
         this.ball.body.setAngularVelocity(0)
         this.tweens.add({
           targets: this.ball,
-          x: this.ballStartPointX,
-          y: this.ballStartPointY,
+          x: this.initialPosition.ball.x,
+          y: this.initialPosition.ball.y,
           ease: 'Linear',
           duration: 100,
           onComplete: () => {
@@ -338,6 +383,29 @@ class MainScene extends Phaser.Scene {
           }
         })
       }
+    })
+  }
+  shieldGroupReset() {
+    const x =  this.initialPosition.shield.x - this.shield.x;
+    const y = 0;
+    [
+      this.shield,
+      this.basketCounter,
+      this.cleanSeriesCounter,
+      this.recordCounter,
+      this.scoreCounter,
+      this.ring,
+      this.leftPin,
+      this.rightPin,
+      ...this.basketNet[0].map(netPoint => netPoint.position)
+    ].forEach(el => {
+      this.tweens.add({
+        targets: el,
+        x: el.x + x,
+        y: el.y+ y,
+        ease: 'Linear',
+        duration: 300,
+      })
     })
   }
   addCollide() {
@@ -425,7 +493,7 @@ class MainScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: this.ball,
-      x: this.ballStartPointX,
+      x: this.initialPosition.ball.x,
       ease: 'Linear',
       duration: 100,
       onComplete: () => {
@@ -489,9 +557,10 @@ class MainScene extends Phaser.Scene {
     if (
       this.isBallMove
       && this.ball.body.velocity.y > 0
-      && this.ball.y > this.ballStartPointY - 300
+      && this.ball.y > this.initialPosition.ball.y - 300
     ) {
       this.ballReset()
+      this.shieldGroupReset()
     }
     if (
       this.ball.depth === 20
@@ -501,7 +570,7 @@ class MainScene extends Phaser.Scene {
       this.ball.depth = 5
     }
 
-    const delta = this.ballStartPointY - this.ball.y
+    const delta = this.initialPosition.ball.y - this.ball.y
     const ballScale = 1 - delta / 1500
 
     if (delta > 0) {
