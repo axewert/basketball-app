@@ -249,6 +249,15 @@ class MainScene extends Phaser.Scene {
   createCoin() {
     this.coin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
     this.coin.alpha = 0
+    this.coinTween = this.tweens.add({
+      targets: this.coin,
+      scaleX: 0.1,
+      ease: 'Linear',
+      duration: 500,
+      yoyo: true,
+      repeat: 2,
+      loop: -1
+    })
     this.isCoinActive = false
     this.earnedCoin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
     this.earnedCoin.alpha = 0
@@ -260,9 +269,12 @@ class MainScene extends Phaser.Scene {
       alpha: 1,
       ease: 'Linear',
       duration: 200,
+      onComplete: () => {
+        this.coinTween.play()
+      }
     })
-  }
 
+  }
   createMenu() {
     this.menu = this.add.image(60, 60, 'menu')
     this.menu.setInteractive().on('pointerdown', () => {
@@ -582,6 +594,7 @@ class MainScene extends Phaser.Scene {
           this.coin.x,
           this.coin.y
         )
+        this.coinCounter.text.setText(this.coinCount)
         this.showCoin()
       }
     })
@@ -607,8 +620,9 @@ class MainScene extends Phaser.Scene {
     this.scoreCounter.setText(this.scoreCount)
     this.cleanSeriesCount = null
     this.cleanSeriesCounter.setText(this.cleanSeriesCount)
-    this.coinCount = 0
-    this.coinCounter.text.setText(this.coinCount)
+    this.coinTween.pause()
+    this.coin.alpha = 0
+    this.isCoinActive = false
   }
   moveShieldGroup() {
     if(!this.levelCount) return
