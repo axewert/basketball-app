@@ -152,39 +152,39 @@ class MainScene extends Phaser.Scene {
         {x: 85, y: 5}
       ],
       [
-        {x: -68, y: 30},
-        {x: -35, y: 30},
-        {x: 35, y: 30},
-        {x: 68, y: 30},
+        {x: -68, y: 7},
+        {x: -35, y: 7},
+        {x: 35, y: 7},
+        {x: 68, y: 7},
 
       ],
       [
-        {x: -50, y: 41},
-        {x: 0, y: 41},
-        {x: 50, y: 41}
+        {x: -50, y: 10},
+        {x: 0, y: 10},
+        {x: 50, y: 10}
       ],
       [
-        {x: -58, y: 59},
-        {x: -26, y: 59},
-        {x: 26, y: 59},
-        {x: 58, y: 59},
+        {x: -58, y: 15},
+        {x: -26, y: 15},
+        {x: 26, y: 15},
+        {x: 58, y: 15},
 
       ],
       [
-        {x: -50, y: 79},
-        {x: 0, y: 79},
-        {x: 50, y: 79}
+        {x: -50, y: 20},
+        {x: 0, y: 20},
+        {x: 50, y: 20}
       ],
       [
-        {x: -48, y: 97},
-        {x: -28, y: 97},
-        {x: 28, y: 97},
-        {x: 48, y: 97}
+        {x: -48, y: 30},
+        {x: -28, y: 30},
+        {x: 28, y: 30},
+        {x: 48, y: 30}
       ],
       [
-        {x: -46, y: 115},
-        {x: 0, y: 115},
-        {x: 46, y: 115}
+        {x: -46, y: 40},
+        {x: 0, y: 20},
+        {x: 46, y: 40}
       ],
     ]
 
@@ -200,7 +200,7 @@ class MainScene extends Phaser.Scene {
         start.position.x, start.position.y,
         end.position.x, end.position.y
       )
-      this.matter.add.constraint(start, end, distance, 0.05)
+      this.matter.add.constraint(start, end, distance, 0.06)
       this.basketLines.push({
         start, end, lineThickness
       })
@@ -604,7 +604,7 @@ class MainScene extends Phaser.Scene {
     this.basketNet.forEach(row => {
       this.tweens.add({
         targets: row[0].force,
-        x: this.getRandom(0,2)/1000,
+        x: -this.getRandom(0,2)/1000,
         ease: 'Linear',
         duration: 150,
         onComplete: (() => {
