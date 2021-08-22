@@ -1,48 +1,4 @@
 class MainScene extends Phaser.Scene {
-  basketNetPoints =  [
-    [
-      {x: -85, y: 5},
-      {x: -42, y: 5},
-      {x: 42, y: 5},
-      {x: 85, y: 5}
-    ],
-    [
-      {x: -68, y: 30},
-      {x: -35, y: 30},
-      {x: 35, y: 30},
-      {x: 68, y: 30},
-
-    ],
-    [
-      {x: -50, y: 41},
-      {x: 0, y: 41},
-      {x: 50, y: 41}
-    ],
-    [
-      {x: -58, y: 59},
-      {x: -26, y: 59},
-      {x: 26, y: 59},
-      {x: 58, y: 59},
-
-    ],
-    [
-      {x: -50, y: 79},
-      {x: 0, y: 79},
-      {x: 50, y: 79}
-    ],
-    [
-      {x: -48, y: 97},
-      {x: -28, y: 97},
-      {x: 28, y: 97},
-      {x: 48, y: 97}
-    ],
-    [
-      {x: -46, y: 115},
-      {x: 0, y: 115},
-      {x: 46, y: 115}
-    ],
-  ]
-  basketLines = []
   constructor(config) {
     super({
       key: 'Main',
@@ -64,11 +20,15 @@ class MainScene extends Phaser.Scene {
   init() {
     this.centerX = 320
     this.centerY = 320
-
+    this.basketLines = []
+    this.initialPosition = {
+      ball: {x: 0, y: 0}
+    }
     this.scoreCount = null
     this.recordCount = this.game.data.recordCount || 0
     this.basketCount = this.game.data.basketCount || 0
-    this.clearCount = null
+    this.cleanSeriesCount = null
+    this.levelCount = 0
 
     this.initFont()
   }
@@ -76,14 +36,14 @@ class MainScene extends Phaser.Scene {
     this.countStyle = {
       font: '100px montserrat',
       fill: 'white'
-      // stroke: "#762D0B",
-      // strokeThickness: 6
     }
+
     this.miniCountStyle = {
       font: '30px montserrat',
       fill: 'white'
     }
-    this.clearCountStyle = {
+
+    this.cleanSeriesCountStyle = {
       font: '80px montserrat',
       fill: 'yellow'
     }
@@ -120,7 +80,7 @@ class MainScene extends Phaser.Scene {
     this.ballReset()
     this.createSounds()
     this.createMenu()
-    this.graphics = this.add.graphics({ lineStyle: { width: 4, color: 0xaa00aa }})
+    this.graphics = this.add.graphics({ lineStyle: { width: 5, color: 0xffffff }})
     this.createBasketNet()
 
   }
@@ -171,20 +131,19 @@ class MainScene extends Phaser.Scene {
 
     this.basketNet = basketNetPoints.map(row => row.map(({x,y}) => {
       return this.matter.add.circle(this.ring.x + x,this.ring.y + y,6, {
-          mass: 2,
           render: {
             visible: true
           }
         })
     }))
-
+//TODO line thickness
     const createConstraint = (start, end, lineThickness = 3) => {
       const distance = Phaser.Math.Distance.Between(
         start.position.x, start.position.y,
         end.position.x, end.position.y
       )
       this.graphics.strokeLineShape(createLine(start, end).geom)
-      this.matter.add.constraint(start,end, distance,1)
+      this.matter.add.constraint(start, end, distance, 0.2)
     }
     const createLine = (start, end) => {
       const line = {
@@ -220,14 +179,15 @@ class MainScene extends Phaser.Scene {
 
         if (row.length === 3 && rowIndex !== lastRow) {
           row.forEach((_, pointIndex) => {
-            const start = this.basketNet[rowIndex][pointIndex]
-            const endPoints = [
+            const start = this.basketNet[rowIndex][pointIndex];
+            [
               this.basketNet[rowIndex-1][pointIndex],
               this.basketNet[rowIndex-1][pointIndex+1],
               this.basketNet[rowIndex+1][pointIndex],
-              this.basketNet[rowIndex+1][pointIndex+1],
+              this.basketNet[rowIndex+1][pointIndex+1]
             ]
               .forEach(end => createConstraint(start, end))
+
           })
         }
 
@@ -271,11 +231,16 @@ class MainScene extends Phaser.Scene {
     }
   }
   createCounters() {
-    this.scoreCounter = this.add.text(this.centerX = 320, 290, this.scoreCount, this.countStyle).setOrigin(0.5)
-    this.recordCounter = this.add.text(this.centerX = 155, 472, this.recordCount, this.miniCountStyle).setOrigin(0.5).setAlign('left')
-    this.basketCounter = this.add.text(this.centerX = 155, 502, this.basketCount, this.miniCountStyle).setOrigin(0.5).setAlign('left')
-    this.clearCounter = this.add.text(this.centerX = 320, 415, this.clearCount, this.clearCountStyle).setOrigin(0.5
-    )
+    // this.scoreCounterStartPointX = this.centerX
+    // this.scoreCounterStartPointY = 290
+    // this.recordCounterStartPointX
+    // this.recordCounterStartPointY
+    // this.basketCounterStartPointX
+    // this.basketCounterStartPointY
+    this.scoreCounter = this.add.text(this.scoreCounterStartPointX, this.scoreCounterStartPointY, this.scoreCount, this.countStyle).setOrigin(0.5)
+    this.recordCounter = this.add.text(this.centerX - 155, 472, this.recordCount, this.miniCountStyle).setOrigin(0.5).setAlign('left')
+    this.basketCounter = this.add.text(this.centerX - 155, 502, this.basketCount, this.miniCountStyle).setOrigin(0.5).setAlign('left')
+    this.cleanSeriesCounter = this.add.text(this.centerX, 415, this.cleanSeriesCount, this.cleanSeriesCountStyle).setOrigin(0.5)
   }
   createPins() {
     this.leftPin = this.add.circle(this.ring.x - 85, this.ring.y + 5, 6).setName('leftPin')
@@ -369,6 +334,7 @@ class MainScene extends Phaser.Scene {
             this.ball.setActive(true)
             this.drag.setEnable(true)
             this.ball.setScale(1)
+            this.moveShieldGroup()
           }
         })
       }
@@ -378,13 +344,7 @@ class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.ball, this.leftPin, this.pinCollide, this.targetCollideControl, this)
     this.physics.add.collider(this.ball, this.rightPin, this.pinCollide, this.targetCollideControl, this)
   }
-  updateBasketLines() {
-    this.graphics.clear()
-    this.basketLines.forEach(({start, end, geom}) => {
-      geom = new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y)
-      this.graphics.strokeLineShape(geom)
-    })
-  }
+
   pinCollide() {
     this.isPinCollide = true
     this.sounds.ball_bounce.play()
@@ -404,20 +364,30 @@ class MainScene extends Phaser.Scene {
       }
     })
   }
+
   targetCollideControl (ball, pin) {
     if(ball.depth === 20) return false
   }
+
+  updateBasketLines() {
+    this.graphics.clear()
+    this.basketLines.forEach(({start, end, geom}) => {
+      geom = new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y)
+      this.graphics.strokeLineShape(geom)
+    })
+  }
+
   goal() {
     if (this.isPinCollide) {
       this.scoreCount += 2
       this.sounds.dirty_goal.play()
-      this.clearCount = null
-      this.clearCounter.setText(this.clearCount)
+      this.cleanSeriesCount = null
+      this.cleanSeriesCounter.setText(this.cleanSeriesCount)
     } else {
       this.scoreCount += 3
       this.sounds.clean_goal.play()
-      this.clearCount++
-      this.clearCounter.setText(this.clearCount > 1 ? `x${this.clearCount}` : null)
+      this.cleanSeriesCount++
+      this.cleanSeriesCounter.setText(this.cleanSeriesCount > 1 ? `x${this.cleanSeriesCount}` : null)
     }
     this.isGoal = true
     this.isPinCollide = false
@@ -425,32 +395,34 @@ class MainScene extends Phaser.Scene {
     this.sounds.bell.play()
 
     this.ball.body.velocity.y = this.ball.body.velocity.y / 5
-    this.basketNet.forEach((row, rowIndex) => {
-      if(rowIndex % 2 === 1) return
-      const force = 0.1
-      this.tweens.add({
-        targets: row[0].force,
-        x: -force,
-        y: -force,
-        ease: 'Linear',
-        duration: 200,
-        onComplete: () => {
-          row[0].force.x = 0
-          row[0].force.y = 0
-        }
-      })
-      this.tweens.add({
-        targets: row[row.length - 1].force,
-        x: force,
-        y:-force,
-        ease: 'Linear',
-        duration: 200,
-        onComplete: () => {
-          row[row.length - 1].force.x = 0
-          row[row.length - 1].force.y = 0
-        }
-      })
-    })
+
+    // this.basketNet.forEach(row => {
+    //   const force = 0.001
+    //   this.tweens.add({
+    //     targets: row[0].force,
+    //     y: force,
+    //     x: -force*5,
+    //     ease: 'Linear',
+    //     duration: 100,
+    //     onComplete: () => {
+    //       row[0].force.x = 0
+    //       row[0].force.y = 0
+    //     }
+    //   })
+    //
+    //   this.tweens.add({
+    //     targets: row[row.length - 1].force,
+    //     y: force,
+    //     x: force*5,
+    //     ease: 'Linear',
+    //     duration: 100,
+    //     onComplete: () => {
+    //       row[row.length - 1].force.x = 0
+    //       row[row.length - 1].force.y = 0
+    //     }
+    //   })
+    // })
+
     this.tweens.add({
       targets: this.ball,
       x: this.ballStartPointX,
@@ -465,6 +437,7 @@ class MainScene extends Phaser.Scene {
   }
   updateCount() {
     this.basketCount++
+    this.levelCount++
     this.basketCounter.setText(this.basketCount)
     this.game.data.basketCount = this.basketCount
     this.scoreCounter.setText(this.scoreCount)
@@ -476,11 +449,41 @@ class MainScene extends Phaser.Scene {
   }
   resetCount() {
     if (this.scoreCount > 0) this.sounds.aaaaa.play()
+    this.levelCount = 0
     this.scoreCount = null
     this.scoreCounter.setText(this.scoreCount)
-    this.clearCount = null
-    this.clearCounter.setText(this.clearCount)
+    this.cleanSeriesCount = null
+    this.cleanSeriesCounter.setText(this.cleanSeriesCount)
   }
+  moveShieldGroup(y = 0) {
+    if(!this.levelCount) return
+    const x = this.getRandom(-100,100);
+    [
+      this.shield,
+      this.basketCounter,
+      this.cleanSeriesCounter,
+      this.recordCounter,
+      this.scoreCounter,
+      this.ring,
+      this.leftPin,
+      this.rightPin,
+      ...this.basketNet[0].map(netPoint => netPoint.position)
+    ].forEach(el => {
+      this.tweens.add({
+        targets: el,
+        x: el.x + x,
+        y: el.y+ y,
+        ease: 'Linear',
+        duration: 300,
+      })
+    })
+
+  }
+
+  getRandom(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+
   update() {
     this.updateBasketLines()
     if (
