@@ -34,7 +34,7 @@ class MainScene extends Phaser.Scene {
       leftPin: {x: 0, y: 0},
       rightPin: {x: 0, y: 0},
       basketNetPoints: [],
-      coin: {x: this.centerX, y: this.centerY + 300}
+      coin: {x: this.centerX, y: this.centerY + 300},
     }
     this.scoreCount = null
     this.recordCount = this.game.data.recordCount || 0
@@ -61,6 +61,10 @@ class MainScene extends Phaser.Scene {
     }
     this.coinCountStyle = {
       font: '40px montserrat',
+      fill: 'white'
+    }
+    this.goalTextStyle = {
+      font: '50px montserrat',
       fill: 'white'
     }
   }
@@ -103,6 +107,16 @@ class MainScene extends Phaser.Scene {
     this.createSounds()
     this.createMenu()
     this.createBasketNet()
+
+    this.goalText = this.add.text(
+      this.initialPosition.coin.x,
+      this.initialPosition.coin.y + 50,
+      null,
+      this.goalTextStyle
+    )
+      .setOrigin(0.5)
+      .setDepth(20)
+
     this.shieldGroup = [
       this.shield,
       this.basketCounter,
@@ -113,7 +127,8 @@ class MainScene extends Phaser.Scene {
       this.leftPin,
       this.rightPin,
       ...this.basketNet[0].map(netPoint => netPoint.position),
-      this.coin
+      this.coin,
+      this.goalText
     ]
     this.addCollide()
   }
@@ -174,7 +189,6 @@ class MainScene extends Phaser.Scene {
           }
         })
     }))
-//TODO line thickness
     const createConstraint = (start, end, lineThickness = 3) => {
       const distance = Phaser.Math.Distance.Between(
         start.position.x, start.position.y,
@@ -244,6 +258,7 @@ class MainScene extends Phaser.Scene {
   createCoin() {
     this.coin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
     this.coin.alpha = 0
+
     this.coinTween = this.tweens.add({
       targets: this.coin,
       scaleX: 0.1,
@@ -251,24 +266,41 @@ class MainScene extends Phaser.Scene {
       duration: 500,
       yoyo: true,
       repeat: 2,
-      loop: -1
+      loop: -1,
+      loopDelay: 100
     })
+
     this.isCoinActive = false
     this.earnedCoin = this.add.image(this.initialPosition.coin.x,this.initialPosition.coin.y,'coin')
     this.earnedCoin.alpha = 0
   }
   showCoin() {
     this.isCoinActive = true
+    this.coinTween.play()
+    this.scaleX = 1
     this.tweens.add({
       targets: this.coin,
       alpha: 1,
       ease: 'Linear',
       duration: 200,
-      onComplete: () => {
-        this.coinTween.play()
-      }
     })
 
+  }
+  setGoalText(text) {
+    this.goalText.alpha = 1
+    this.goalText.setText(`+${text}`)
+    const initialPosY = this.goalText.y
+    this.tweens.add({
+      targets: this.goalText,
+      y: this.goalText.y - 100,
+      alpha: 0,
+      ease: 'Linear',
+      duration: 500,
+      delay: 1000,
+      onComplete: () => {
+        this.goalText.y = initialPosY
+      }
+    })
   }
   createMenu() {
     this.menu = this.add.image(60, 60, 'menu')
@@ -334,7 +366,7 @@ class MainScene extends Phaser.Scene {
       .setAlign('left')
       .setDepth(10)
     this.coinCounter.image = this.add.image(
-      this.initialPosition.coinCounter.x + 40,
+      this.initialPosition.coinCounter.x + 48,
       this.initialPosition.coinCounter.y,
       'coin'
     )
@@ -518,16 +550,23 @@ class MainScene extends Phaser.Scene {
     })
   }
   goal() {
+    const modifier = this.cleanSeriesCount
+      ? this.cleanSeriesCount
+      : 1
     if (this.isPinCollide) {
-      this.scoreCount += 2
+      const scorePoint = 2 * modifier
+      this.scoreCount += scorePoint
       this.sounds.dirty_goal.play()
       this.cleanSeriesCount = null
       this.cleanSeriesCounter.setText(this.cleanSeriesCount)
+      this.setGoalText(scorePoint)
     } else {
-      this.scoreCount += 3
+      const scorePoint = 3 * modifier
+      this.scoreCount += scorePoint
       this.sounds.clean_goal.play()
       this.cleanSeriesCount++
       this.cleanSeriesCounter.setText(this.cleanSeriesCount > 1 ? `x${this.cleanSeriesCount}` : null)
+      this.setGoalText(scorePoint)
     }
     this.isGoal = true
     this.isPinCollide = false
@@ -535,33 +574,6 @@ class MainScene extends Phaser.Scene {
     this.sounds.bell.play()
 
     this.ball.body.velocity.y = this.ball.body.velocity.y / 5
-
-    // this.basketNet.forEach(row => {
-    //   const force = 0.001
-    //   this.tweens.add({
-    //     targets: row[0].force,
-    //     y: force,
-    //     x: -force*5,
-    //     ease: 'Linear',
-    //     duration: 100,
-    //     onComplete: () => {
-    //       row[0].force.x = 0
-    //       row[0].force.y = 0
-    //     }
-    //   })
-    //
-    //   this.tweens.add({
-    //     targets: row[row.length - 1].force,
-    //     y: force,
-    //     x: force*5,
-    //     ease: 'Linear',
-    //     duration: 100,
-    //     onComplete: () => {
-    //       row[row.length - 1].force.x = 0
-    //       row[row.length - 1].force.y = 0
-    //     }
-    //   })
-    // })
 
     this.tweens.add({
       targets: this.ball,
@@ -577,6 +589,7 @@ class MainScene extends Phaser.Scene {
       ? this.moveCoin()
       : this.showCoin()
   }
+
   moveCoin() {
     this.coin.alpha = 0
     this.earnedCoin.alpha = 1
@@ -592,6 +605,7 @@ class MainScene extends Phaser.Scene {
           this.coin.x,
           this.coin.y
         )
+        this.coinCount++
         this.coinCounter.text.setText(this.coinCount)
         this.showCoin()
       }
@@ -600,7 +614,6 @@ class MainScene extends Phaser.Scene {
   updateCount() {
     this.basketCount++
     this.levelCount++
-    this.coinCount++
     this.basketCounter.setText(this.basketCount)
     this.game.data.basketCount = this.basketCount
     this.game.data.coinCount = this.coinCount
@@ -618,23 +631,22 @@ class MainScene extends Phaser.Scene {
     this.scoreCounter.setText(this.scoreCount)
     this.cleanSeriesCount = null
     this.cleanSeriesCounter.setText(this.cleanSeriesCount)
-    this.coinTween.pause()
     this.coin.alpha = 0
     this.isCoinActive = false
   }
   moveShieldGroup() {
-    if(!this.levelCount) return
-    const x = this.getRandom(-100,100)
-    const y = this.levelCount > 2 ? this.getRandom(-100,100) : 0
-    this.shieldGroup.forEach(el => {
-      this.tweens.add({
-        targets: el,
-        x: el.x + x,
-        y: el.y+ y,
-        ease: 'Linear',
-        duration: 300,
-      })
-    })
+    // if(!this.levelCount) return
+    // const x = this.getRandom(-100,100)
+    // const y = this.levelCount > 2 ? this.getRandom(-100,100) : 0
+    // this.shieldGroup.forEach(el => {
+    //   this.tweens.add({
+    //     targets: el,
+    //     x: el.x + x,
+    //     y: el.y+ y,
+    //     ease: 'Linear',
+    //     duration: 300,
+    //   })
+    // })
   }
 
   getRandom(min, max) {
