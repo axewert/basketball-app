@@ -11,7 +11,7 @@ class MainScene extends Phaser.Scene {
           }
         },
         matter: {
-          debug: true,
+          debug: false,
           gravity: { y: 10 }
         }
       },
@@ -86,7 +86,8 @@ class MainScene extends Phaser.Scene {
 
   }
   create() {
-    this.graphics = this.add.graphics({ lineStyle: { width: 5, color: 0xffffff }})
+    this.thickLine = this.add.graphics({ lineStyle: { width: 5, color: 0xffffff }})
+    this.thinLine = this.add.graphics({ lineStyle: { width: 3, color: 0xffffff }})
     this.shield = this.add.image(this.initialPosition.shield.x, this.initialPosition.shield.y, 'shield').setOrigin(0)
     this.ring = this.add.image(this.initialPosition.ring.x, this.initialPosition.ring.y, 'ring')
       .setOrigin(0.5,0)
@@ -116,7 +117,11 @@ class MainScene extends Phaser.Scene {
     ]
     this.addCollide()
   }
-
+  getGraphics(thickness) {
+    return thickness === 3
+      ? this.thinLine
+      : this.thickLine
+  }
   createBasketNet() {
     this.initialPosition.basketNetPoints = [
       [
@@ -175,18 +180,10 @@ class MainScene extends Phaser.Scene {
         start.position.x, start.position.y,
         end.position.x, end.position.y
       )
-      this.graphics.strokeLineShape(createLine(start, end).geom)
-      this.graphics.setDepth(10)
       this.matter.add.constraint(start, end, distance, 0.2)
-    }
-    const createLine = (start, end) => {
-      const line = {
-        geom: new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y),
-        start,
-        end
-      }
-      this.basketLines.push(line)
-      return line
+      this.basketLines.push({
+        start, end, lineThickness
+      })
     }
     const firstRow = 0
     const lastRow = this.basketNet.length - 1
@@ -209,7 +206,6 @@ class MainScene extends Phaser.Scene {
 
     this.basketNet
       .forEach((row,rowIndex) => {
-
         if (row.length === 3 && rowIndex !== lastRow) {
           row.forEach((_, pointIndex) => {
             const start = this.basketNet[rowIndex][pointIndex];
@@ -220,7 +216,6 @@ class MainScene extends Phaser.Scene {
               this.basketNet[rowIndex+1][pointIndex+1]
             ]
               .forEach(end => createConstraint(start, end))
-
           })
         }
 
@@ -242,8 +237,8 @@ class MainScene extends Phaser.Scene {
           createConstraint(startLeft,endLeft,5)
           createConstraint(startRight,endRight,5)
         }
-
       })
+    this.drawLines()
   }
 
   createCoin() {
@@ -511,14 +506,17 @@ class MainScene extends Phaser.Scene {
     if(ball.depth === 20) return false
   }
 
-  updateBasketLines() {
-    this.graphics.clear()
-    this.basketLines.forEach(({start, end, geom}) => {
-      geom = new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y)
-      this.graphics.strokeLineShape(geom)
+
+  drawLines() {
+    this.thinLine.clear()
+    this.thickLine.clear()
+    this.basketLines.forEach(({start, end, lineThickness}) => {
+      const geometry = new Phaser.Geom.Line(start.position.x, start.position.y, end.position.x, end.position.y)
+      const graphics = this.getGraphics(lineThickness)
+      graphics.strokeLineShape(geometry)
+      graphics.setDepth(10)
     })
   }
-
   goal() {
     if (this.isPinCollide) {
       this.scoreCount += 2
@@ -644,7 +642,7 @@ class MainScene extends Phaser.Scene {
   }
 
   update() {
-    this.updateBasketLines()
+    this.drawLines()
     if (
       this.isBallMove
       && this.ball.body.velocity.y > 0
